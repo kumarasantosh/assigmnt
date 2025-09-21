@@ -1,10 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { Search, MapPin, Clock, Edit2, Trash2 } from "lucide-react";
 
+// This is a placeholder for a proper modal or notification system
 const showMessage = (message) => {
+  // In a real app, you would use a library like react-hot-toast or a custom modal component
+  // For this example, we'll use the browser's alert, but it's not recommended for production.
   alert(message);
 };
 
+// --- Helper functions moved outside the component ---
+
+// A helper function to generate random tags for jobs
 const generateJobTags = () => {
   const allTags = [
     "React",
@@ -18,10 +24,11 @@ const generateJobTags = () => {
     "Leadership",
     "Remote",
   ];
-  const numTags = Math.floor(Math.random() * 4) + 2;
+  const numTags = Math.floor(Math.random() * 4) + 2; // get 2 to 5 tags
   return allTags.sort(() => 0.5 - Math.random()).slice(0, numTags);
 };
 
+// A list of mock jobs to be used as a fallback if API calls fail
 const getMockJobs = () => [
   {
     id: 1,
@@ -168,22 +175,22 @@ const App = () => {
 
   const [filters, setFilters] = useState({
     jobType: {
-      fullTime: true,
-      partTime: true,
-      contract: true,
-      remote: true,
+      fullTime: false,
+      partTime: false,
+      contract: false,
+      remote: false,
     },
     location: {
-      sanFrancisco: true,
-      newYork: true,
-      london: true,
-      berlin: true,
-      remote: true,
+      sanFrancisco: false,
+      newYork: false,
+      london: false,
+      berlin: false,
+      remote: false,
     },
     experienceLevel: {
-      entryLevel: true,
-      midLevel: true,
-      seniorLevel: true,
+      entryLevel: false,
+      midLevel: false,
+      seniorLevel: false,
     },
   });
 
@@ -191,6 +198,8 @@ const App = () => {
     const fetchJobs = async () => {
       setLoading(true);
       try {
+        // Using a mock API for demonstration.
+        // In a real application, you would fetch from your actual backend.
         const response = await fetch(
           "https://jsonplaceholder.typicode.com/posts"
         );
@@ -220,6 +229,7 @@ const App = () => {
   useEffect(() => {
     let results = jobs;
 
+    // Apply search term filter
     if (searchTerm) {
       results = results.filter(
         (job) =>
@@ -228,67 +238,80 @@ const App = () => {
       );
     }
 
+    // Apply checkbox filters
     const activeJobTypes = Object.keys(filters.jobType).filter(
       (key) => filters.jobType[key]
     );
-    results = results.filter((job) => {
-      const jobType = job.type.toLowerCase().replace(/\s+/g, "");
-      return activeJobTypes.some((type) =>
-        jobType.includes(type.toLowerCase())
-      );
-    });
+    if (activeJobTypes.length > 0) {
+      results = results.filter((job) => {
+        const jobType = job.type.toLowerCase().replace(/\s+/g, "");
+        return activeJobTypes.some((type) =>
+          jobType.includes(type.toLowerCase())
+        );
+      });
+    }
 
     const activeLocations = Object.keys(filters.location).filter(
       (key) => filters.location[key]
     );
-    const locationMap = { sanfrancisco: "san francisco", newyork: "new york" };
-    results = results.filter((job) =>
-      activeLocations.some((loc) =>
-        job.location.toLowerCase().includes(locationMap[loc] || loc)
-      )
-    );
+    if (activeLocations.length > 0) {
+      const locationMap = {
+        sanfrancisco: "san francisco",
+        newyork: "new york",
+      };
+      results = results.filter((job) =>
+        activeLocations.some((loc) =>
+          job.location.toLowerCase().includes(locationMap[loc] || loc)
+        )
+      );
+    }
 
     const activeExperienceLevels = Object.keys(filters.experienceLevel).filter(
       (key) => filters.experienceLevel[key]
     );
-    results = results.filter((job) => {
-      const title = job.title.toLowerCase();
-      return activeExperienceLevels.some((level) => {
-        switch (level) {
-          case "entryLevel":
-            return (
-              !title.includes("senior") &&
-              !title.includes("lead") &&
-              !title.includes("principal")
-            );
-          case "midLevel":
-            return (
-              !title.includes("senior") &&
-              !title.includes("junior") &&
-              !title.includes("entry") &&
-              !title.includes("lead") &&
-              !title.includes("principal")
-            );
-          case "seniorLevel":
-            return (
-              title.includes("senior") ||
-              title.includes("lead") ||
-              title.includes("principal")
-            );
-          default:
-            return true;
-        }
+    if (activeExperienceLevels.length > 0) {
+      results = results.filter((job) => {
+        const title = job.title.toLowerCase();
+        return activeExperienceLevels.some((level) => {
+          switch (level) {
+            case "entryLevel":
+              return (
+                !title.includes("senior") &&
+                !title.includes("lead") &&
+                !title.includes("principal")
+              );
+            case "midLevel":
+              return (
+                !title.includes("senior") &&
+                !title.includes("junior") &&
+                !title.includes("entry") &&
+                !title.includes("lead") &&
+                !title.includes("principal")
+              );
+            case "seniorLevel":
+              return (
+                title.includes("senior") ||
+                title.includes("lead") ||
+                title.includes("principal")
+              );
+            default:
+              return true;
+          }
+        });
       });
-    });
+    }
 
     setFilteredJobs(results);
 
+    // After filtering, if the selected job is no longer in the list,
+    // default to the first job in the new list or null.
     if (selectedJob && !results.find((job) => job.id === selectedJob.id)) {
       setSelectedJob(results.length > 0 ? results[0] : null);
     } else if (!selectedJob && results.length > 0) {
+      // If no job is selected, default to the first one in the filtered list
       setSelectedJob(results[0]);
     }
-  }, [jobs, searchTerm, filters, selectedJob]);
+  }, [jobs, searchTerm, filters]);
 
   const handleApplyJob = (jobId) => {
     if (applications.some((app) => app.jobId === jobId)) return;
@@ -318,8 +341,37 @@ const App = () => {
 
   const handleAddJob = (jobData) => {
     const newJob = enhanceJobsWithDetails([{ ...jobData }])[0];
-    setJobs([newJob, ...jobs]);
+    const newJobsList = [newJob, ...jobs];
+
+    // Manually update both the master list and the filtered list
+    // This ensures the new job appears immediately, regardless of filters.
+    setJobs(newJobsList);
+    setFilteredJobs(newJobsList);
+
+    // Reset UI elements to show the new job
     setShowJobForm(false);
+    setSelectedJob(newJob);
+    setSearchTerm("");
+    setFilters({
+      jobType: {
+        fullTime: false,
+        partTime: false,
+        contract: false,
+        remote: false,
+      },
+      location: {
+        sanFrancisco: false,
+        newYork: false,
+        london: false,
+        berlin: false,
+        remote: false,
+      },
+      experienceLevel: {
+        entryLevel: false,
+        midLevel: false,
+        seniorLevel: false,
+      },
+    });
   };
 
   const handleUpdateJob = (jobData) => {
@@ -336,16 +388,12 @@ const App = () => {
   };
 
   const handleDeleteJob = (jobId) => {
+    // Just update the main jobs list. The useEffect will handle updating
+    // the filtered list and the selected job.
     setJobs(jobs.filter((job) => job.id !== jobId));
-    if (selectedJob && selectedJob.id === jobId) {
-      setSelectedJob(
-        filteredJobs.length > 1
-          ? filteredJobs.find((j) => j.id !== jobId)
-          : null
-      );
-    }
   };
 
+  // A reusable Job Form component for adding and editing jobs
   const JobForm = ({ job, onSubmit, onCancel }) => {
     const [formData, setFormData] = useState({
       title: job?.title || "",
@@ -501,7 +549,7 @@ const App = () => {
       {/* Main Content */}
       <main className="max-w-screen-xl mx-auto p-4 sm:p-6 lg:p-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Left Sidebar for Filters */}
+          {/* Left Sidebar for Filters - Always Visible */}
           <aside className="lg:col-span-3">
             <div className="bg-white rounded-lg shadow p-6 sticky top-24">
               <div className="relative mb-6">
